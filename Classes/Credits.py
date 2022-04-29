@@ -16,6 +16,6 @@ def getCredits():
           | |     __/ |                                                               
           |_|    |___/                                                                
 
-     version %s created by %s & rewritten by %s
+     versiyon %s Oluşturan %s &  %s için oluşturuldu.
 
     ''' % (__version__, __author__, __improver__,), __version__
