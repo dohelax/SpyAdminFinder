@@ -23,18 +23,18 @@
    
     * #### Linux
        ```
-       git clone https://github.com/mIcHyAmRaNe/okadminfinder3.git
-       cd okadminfinder3
-       chmod +x okadminfinder.py
-       python3 okadminfinder.py
+       git clone https://github.com/dohelax/SpyAdminFinder.git
+       cd SpyAdminFinder
+       chmod +x spyadminfinder.py
+       python3 spyadminfinder.py
        ```
 
     * #### Windows
-       download & extract [zip](https://github.com/mIcHyAmRaNe/okadminfinder3/archive/master.zip)
+       download & extract [zip](https://github.com/dohelax/SpyAdminFinder)
        ```
-       cd okadminfinder3
-       py -3 okadminfinder.py
+       cd SpyAdminFinder
+       py -3 spyadminfinder.py
        ```
 
     * #### [Pentestbox](https://pentestbox.com) (same procedure as Linux)
-        you can add an alias by adding this line: `okadminfinder=py -3 "%pentestbox_ROOT%/bin/Path/to/okadminfinder3/okadminfinder.py" $*` to `C://Pentestbox/bin/customtools/customaliases` file and so you'll be able to launch it using      `okadminfinder`
+       bu satırı ekleyerek bir takma ad ekleyebilirsiniz: `okadminfinder=py -3 "%pentestbox_ROOT%/bin/Path/to/SpyAdminFinder/spyadminfinder.py" $*` to `C://Pentestbox/bin/customtools/customaliases` dosyayı böyle kullanarak başlatabileceksiniz      `spyadminfinder`
