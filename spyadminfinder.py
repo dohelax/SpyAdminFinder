@@ -65,7 +65,7 @@ SpyAdminFinder.header = headers
 def url(site):
     try:
         if SpyAdminFinder.checkUrl(site, proxies):
-            messenger.writeMessage('\n  Site %s is stable\n' % site, 'green')
+            messenger.writeMessage('\n  Site %s taranıyor\n' % site, 'green')
             urls = tqdm(SpyAdminFinder.getUrls('LinkFile/adminpanellinks.txt'), bar_format="{l_bar}{bar}|{n_fmt}/{total_fmt}{postfix}")
         else:
             messenger.writeMessage('  Something wrong with url', 'red')
