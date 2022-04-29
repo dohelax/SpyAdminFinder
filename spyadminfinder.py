@@ -83,12 +83,12 @@ def url(site):
             # Create test link with getting params from site and links.txt file
             reqLink = SpyAdminFinder.createReqLink(site, url, proxies)
             # messenger.writeMessage('\t[#] Checking http://' + reqLink, 'yellow')
-            urls.set_description(Fore.WHITE + Style.NORMAL + "  Processing ...")
+            urls.set_description(Fore.WHITE + Style.NORMAL + "  Taranıyor ...")
             # Test created link for HTTPerrors. If not error - potential admin panel
             if SpyAdminFinder.checkUrl(reqLink, proxies):
                 adminCount += 1
 
-                messenger.writeMessage('\n' + Fore.CYAN + Style.BRIGHT + '    {:<50}'.format('[✔] http://' + reqLink,) + Fore.GREEN + Style.BRIGHT + '{:>30}'.format('Admin page found!\n'), 'bright')
+                messenger.writeMessage('\n' + Fore.CYAN + Style.BRIGHT + '    {:<50}'.format('[✔] http://' + reqLink,) + Fore.GREEN + Style.BRIGHT + '{:>30}'.format('Admin Panel Bulundu!\n'), 'bright')
 
                 # Stopped process? and waiting for input for continue
                 n = 10
@@ -96,7 +96,7 @@ def url(site):
                     #what to do every time.
                     if adminCount % n == 0:
                         #what to do every nth time.
-                        messenger.writeInput('  Press' +Fore.BLUE+Style.BRIGHT+ ' ENTER ' +Fore.WHITE + Style.NORMAL + 'to continue scanning OR' +Fore.RED + Style.BRIGHT + ' CTRL+C ' + Fore.WHITE + Style.NORMAL + 'to cancel \n')
+                        messenger.writeInput('  ENTER\'a' +Fore.BLUE+Style.BRIGHT+ ' Bas ' +Fore.WHITE + Style.NORMAL + 'taramaya devam et ya da' +Fore.RED + Style.BRIGHT + ' CTRL+C ' + Fore.WHITE + Style.NORMAL + 'ile durdur aslanım. \n')
                         break
                     else:
                         continue
