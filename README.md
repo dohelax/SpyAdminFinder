@@ -36,5 +36,3 @@
        py -3 spyadminfinder.py
        ```
 
-    * #### [Pentestbox](https://pentestbox.com) (same procedure as Linux)
-       bu satırı ekleyerek bir takma ad ekleyebilirsiniz: `okadminfinder=py -3 "%pentestbox_ROOT%/bin/Path/to/SpyAdminFinder/spyadminfinder.py" $*` to `C://Pentestbox/bin/customtools/customaliases` dosyayı böyle kullanarak başlatabileceksiniz      `spyadminfinder`
