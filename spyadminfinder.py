@@ -1,32 +1,31 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import os
+import argparse
+import random
+import requests
+import socket
+import socks
+import subprocess
+import sys
+import time
+import threading
+from tqdm import tqdm
+import urllib.request, urllib.error, urllib.parse
+from urllib.request import urlopen
+from colorama import Fore, Style
+
 try:
-    # Change main dir to this (need for Pentest Box)
-    import os
+    # Change main dir to this (needed for Pentest Box)
     os.path.abspath(__file__)
-    from Classes import (Credits,
-                         SpyAdminFinderClass,
-                         MessengerClass)
-    import argparse
-    from colorama import Fore, Back, Style
-    import random
-    import requests
-    import socket
-    import socks
-    import subprocess
-    import sys
-    import time
-    import threading
-    from tqdm import tqdm
-    import urllib.request, urllib.error, urllib.parse
-    from urllib.request import urlopen
+    from Classes import Credits, SpyAdminFinderClass, MessengerClass
 
     # Get Messenger class to print information
     messenger = MessengerClass.Messenger()
 
-except():
-    exit('\n\t[x] Session Cancelled; Something wrong with import modules')
+except ImportError as e:
+    sys.exit(f'\n\t[x] Session Cancelled; Module import failed: {e}')
 
 # Get credits and print it
 messenger.writeMessage(Credits.getCredits()[0], 'green')
@@ -34,119 +33,90 @@ messenger.writeMessage(Credits.getCredits()[0], 'green')
 # Get main class object
 SpyAdminFinder = SpyAdminFinderClass.SpyAdminFinder()
 
-parser = argparse.ArgumentParser(formatter_class=lambda prog: argparse.HelpFormatter(prog, max_help_position=30, width=90))
-parser.add_argument("-u", "--url", default=False,
-                    help="Hedef URL (e.g. 'www.example.com' or 'example.com')")
-parser.add_argument("-t", "--tor", action='store_true', default=False,
-                    help="Tor anonim ağını kullan")
-parser.add_argument("-p", "--proxy", default=False,
-                    help="HTTP Proxy kullan (e.g '127.0.0.1:8080')")
-parser.add_argument("-rp", "--random-proxy", action="store_true", default=False,
-                    dest="random_proxy", help="Rastgele seçilen proxy sunucusunu kullan")
-parser.add_argument("-r", "--random-agent", action='store_true', default=False,
-                    dest='rand', help="Rastgele seçilen user-agent kullan")
-parser.add_argument("-v", "--verbose", action='store_true', default=False,
-                    help="Daha fazla bilgi göster")
-parser.add_argument("-U", "--update", action='store_true', default=False,
-                    help="SpyAdminFinder'ı Güncelle")
-parser.add_argument("-i", "--interactive", action='store_true', default=False,
-                    help="Interactive interface" + Fore.RED+Style.BRIGHT + "[other arguments not required]")
+parser = argparse.ArgumentParser(
+    formatter_class=lambda prog: argparse.HelpFormatter(prog, max_help_position=30, width=90)
+)
+parser.add_argument("-u", "--url", default=False, help="Target URL (e.g. 'www.example.com' or 'example.com')")
+parser.add_argument("-t", "--tor", action='store_true', default=False, help="Use Tor anonymity network")
+parser.add_argument("-p", "--proxy", default=False, help="Use HTTP Proxy (e.g '127.0.0.1:8080')")
+parser.add_argument("-rp", "--random-proxy", action="store_true", default=False, dest="random_proxy", help="Use a randomly selected proxy server")
+parser.add_argument("-r", "--random-agent", action='store_true', default=False, dest='rand', help="Use a randomly selected user-agent")
+parser.add_argument("-v", "--verbose", action='store_true', default=False, help="Show more detailed information")
+parser.add_argument("-U", "--update", action='store_true', default=False, help="Update SpyAdminFinder")
+parser.add_argument("-i", "--interactive", action='store_true', default=False, help="Interactive interface" + Fore.RED + Style.BRIGHT + "[other arguments not required]")
+
+args = parser.parse_args()
+
 if len(sys.argv) <= 1:
     parser.print_usage()
     sys.exit(1)
-else:
-    args = parser.parse_args()
 
-# site = 'testphp.vulnweb.com'
 proxies = ""
-headers = {'user-agent': 'SpyAdminFinder/%s' % Credits.getCredits()[1]}
+headers = {'user-agent': f'SpyAdminFinder/{Credits.getCredits()[1]}'}
 SpyAdminFinder.header = headers
 
-def url(site):
+def url_scan(site):
     try:
         if SpyAdminFinder.checkUrl(site, proxies):
-            messenger.writeMessage('\n  Site %s taranıyor bulucaz inş.\n' % site, 'green')
+            messenger.writeMessage(f'\n  Scanning {site}, we hope to find something.\n', 'green')
             urls = tqdm(SpyAdminFinder.getUrls('LinkFile/adminpanellinks.txt'), bar_format="{l_bar}{bar}|{n_fmt}/{total_fmt}{postfix}")
         else:
-            messenger.writeMessage('  Something wrong with url', 'red')
+            messenger.writeMessage('  Something is wrong with the URL', 'red')
             urls = tqdm(SpyAdminFinder.getUrls('LinkFile/adminpanellinks.txt'), bar_format="{bar}")
-            exit(SystemExit)
-        # Get links for checking
-
-        # Counters for total links, and admin panel find
-        totalCount = len(urls)
-        adminCount = 0
-
-        # Checking all links
+            sys.exit(1)
+        
+        totalCount, adminCount = len(urls), 0
+        
         for url in urls:
-
-            # Create test link with getting params from site and links.txt file
             reqLink = SpyAdminFinder.createReqLink(site, url, proxies)
-            # messenger.writeMessage('\t[#] Checking http://' + reqLink, 'yellow')
-            urls.set_description(Fore.WHITE + Style.NORMAL + "  Taranıyor ...")
-            # Test created link for HTTPerrors. If not error - potential admin panel
+            urls.set_description(Fore.WHITE + Style.NORMAL + "  Scanning...")
+            
             if SpyAdminFinder.checkUrl(reqLink, proxies):
                 adminCount += 1
+                messenger.writeMessage(f'\n{Fore.CYAN + Style.BRIGHT}[✔] http://{reqLink:<50}{Fore.GREEN + Style.BRIGHT}{"Admin Panel Found!":>30}\n', 'bright')
 
-                messenger.writeMessage('\n' + Fore.CYAN + Style.BRIGHT + '    {:<50}'.format('[✔] http://' + reqLink,) + Fore.GREEN + Style.BRIGHT + '{:>30}'.format('Admin Panel Bulundu!\n'), 'bright')
-
-                # Stopped process? and waiting for input for continue
-                n = 10
-                for x in range(totalCount):
-                    #what to do every time.
-                    if adminCount % n == 0:
-                        #what to do every nth time.
-                        messenger.writeInput('  ENTER\'a' +Fore.BLUE+Style.BRIGHT+ ' Bas ' +Fore.WHITE + Style.NORMAL + 'taramaya devam et ya da' +Fore.RED + Style.BRIGHT + ' CTRL+C ' + Fore.WHITE + Style.NORMAL + 'ile durdur aslanım. \n')
-                        break
-                    else:
-                        continue
-
-            # If HTTPerrors continue testing other links
+                if adminCount % 10 == 0:
+                    messenger.writeInput('  Press ' + Fore.BLUE + Style.BRIGHT + 'Enter ' + Fore.WHITE + Style.NORMAL + 'to continue or ' + Fore.RED + Style.BRIGHT + 'CTRL+C ' + Fore.WHITE + Style.NORMAL + 'to stop.\n')
             else:
                 continue
 
-        # Write last information about scanning with counters
-        messenger.writeMessage('\n\n  Tamamlandı \n', 'green')
-        messenger.writeMessage(str(adminCount) + ' Admin panel bulundu', 'white')
-        messenger.writeMessage(str(totalCount) + ' Taranan toplam sayfa', 'white')
-        messenger.writeInput('  [/] Tarama bitti; Çıkmam için Enter\'a bas ', 'green')
-        messenger.writeMessage('', 'white')
+        messenger.writeMessage(f'\n\n  Scan Complete \n', 'green')
+        messenger.writeMessage(f'{adminCount} Admin panels found', 'white')
+        messenger.writeMessage(f'{totalCount} Total pages scanned', 'white')
+        messenger.writeInput('  [/] Scan complete; Press Enter to exit ', 'green')
 
     except (KeyboardInterrupt, SystemExit):
-        messenger.writeMessage('\n\t[x] İptal edildi', 'red')
+        messenger.writeMessage('\n\t[x] Cancelled', 'red')
         urls.close()
-        messenger.writeMessage('', 'white')
 
-    except():
-        messenger.writeMessage('\n\t[x] İptal edildi; Unknown error', 'red')
-
-        messenger.writeMessage('', 'white')
+    except Exception as e:
+        messenger.writeMessage(f'\n\t[x] Cancelled due to unknown error: {e}', 'red')
 
 def random_agent():
-    useragent = "LinkFile/user-agent.txt"
-    ua = open(useragent, 'r').read().splitlines()
-    rua = random.choice(ua)
-    headers = {'user-agent': rua}
+    useragent_file = "LinkFile/user-agent.txt"
+    with open(useragent_file, 'r') as f:
+        ua_list = f.read().splitlines()
+    headers = {'user-agent': random.choice(ua_list)}
     SpyAdminFinder.header = headers
-    return SpyAdminFinder.header
+    return headers
 
 def random_proxy():
-    proxy_list = requests.get('https://raw.githubusercontent.com/a2u/free-proxy-list/master/free-proxy-list.txt').text.splitlines()
-    random_proxy = random.choice(proxy_list)
-    rip = random_proxy.rsplit(':', 1)[0] #random proxy ip
-    rpp = random_proxy.rsplit(':', 1)[1] #random proxy port
-    proxies = {
-        'http': random_proxy,
-        'https': random_proxy,
-    }
+    proxy_list_url = 'https://raw.githubusercontent.com/a2u/free-proxy-list/master/free-proxy-list.txt'
+    proxy_list = requests.get(proxy_list_url).text.splitlines()
+    selected_proxy = random.choice(proxy_list)
+    ip, port = selected_proxy.rsplit(':', 1)
+    
+    proxies = {'http': selected_proxy, 'https': selected_proxy}
+    
     try:
         s = socks.socksocket()
-        s.set_proxy(socks.HTTP, rip, rpp)
+        s.set_proxy(socks.HTTP, ip, int(port))
         socket.socket = socks.socksocket
         urllib.request.urlopen
     except (IndexError, IndentationError):
-        messenger.writeMessage('\n\tSorry Error 😭 ', 'red')
-        quit(0)
+        messenger.writeMessage('\n\tSorry, Error 😭 ', 'red')
+        sys.exit(0)
+    
     return proxies
 
 def tor():
@@ -154,71 +124,29 @@ def tor():
     socket.socket = socks.socksocket
     urllib.request.urlopen
 
-def proxy():
-    args.proxy=str(args.proxy)
-    proxies ={
-    'http': args.proxy,
-    'https': args.proxy,
-    }
+def setup_proxy():
+    proxies = {'http': args.proxy, 'https': args.proxy}
     try:
-        ht = args.proxy.split(':')
-        pr = int(ht[1])
+        ip, port = args.proxy.split(':')
         s = socks.socksocket()
-        s.set_proxy(socks.HTTP, ht[0], pr)
+        s.set_proxy(socks.HTTP, ip, int(port))
         socket.socket = socks.socksocket
         urllib.request.urlopen
     except (IndexError, IndentationError):
-        messenger.writeMessage('\n\tProxy formatını denetleyin | örnek: 127.0.0.1:8080 ', 'red')
-        quit(0)
+        messenger.writeMessage('\n\tCheck proxy format | Example: 127.0.0.1:8080 ', 'red')
+        sys.exit(0)
+    
     try:
-        print(Fore.BLUE + '\tHttp proxy\'si kontrol ediliyor...', end="\r")
+        print(Fore.BLUE + '\tChecking HTTP proxy...', end="\r")
         time.sleep(1)
-        rp = requests.get('http://testphp.vulnweb.com', proxies=proxies, timeout=10)
-        print(Fore.BLUE + '\tHttp proxy\'si kontrol ediliyor...', Fore.GREEN+Style.BRIGHT + 'OK\n' + Fore.WHITE + Style.NORMAL)
+        requests.get('http://testphp.vulnweb.com', proxies=proxies, timeout=10)
+        print(Fore.BLUE + '\tChecking HTTP proxy...', Fore.GREEN + Style.BRIGHT + 'OK\n' + Fore.WHITE + Style.NORMAL)
     except requests.RequestException:
-        print(Fore.BLUE + '\tHttp proxy\'si kontrol ediliyor...', Fore.RED + Style.BRIGHT + 'BAD\n' + Fore.WHITE + Style.NORMAL)
-        messenger.writeMessage('\n ╔═══[!] Bağlantı Hatası', 'red')
-        print(' ║')
-        print(' ╚══►' + Fore.BLUE + '[Note]' + Fore.YELLOW + '╾╥──╸ Proxy ya da Tor bağlantınızı kontrol edin')
-        print('            ╟──╸ ' + Fore.YELLOW+Style.BRIGHT + 'ekleme' + Fore.YELLOW + Style.NORMAL + ' \'http://\' or \'https://\'')
-        print('            ╙──╸ ' + Fore.YELLOW + Style.NORMAL + 'Url\'yi doğru yazdığınızdan emin olun\n')
-        quit(0)
+        print(Fore.BLUE + '\tChecking HTTP proxy...', Fore.RED + Style.BRIGHT + 'BAD\n' + Fore.WHITE + Style.NORMAL)
+        messenger.writeMessage('\n ╔═══[!] Connection Error', 'red')
+        sys.exit(0)
+    
     return proxies
-
-def ipinf():
-    ip = requests.get('http://ifconfig.co/ip', proxies=proxies, headers=SpyAdminFinder.header).text
-    cc = requests.get('http://ifconfig.co/country', proxies=proxies, headers=SpyAdminFinder.header).text
-    iso = requests.get('http://ifconfig.co/country-iso', proxies=proxies,  headers=SpyAdminFinder.header).text
-    city = requests.get('http://ifconfig.co/city', proxies=proxies,  headers=SpyAdminFinder.header).text
-    print('''    ┆
-    ├───[''' + Fore.CYAN + '''IP adresi Bilgileri:''' + Fore.YELLOW + ''']
-    ┆''');
-    print('    ├──► '+ Fore.BLUE +'Ülke: '+ cc + Fore.YELLOW +'    ├───► '+ Fore.BLUE +'IP: ' + ip + Fore.YELLOW + '    ├────► '+ Fore.BLUE +'Ülke ISO: ' + iso + Fore.YELLOW + '    └────► '+ Fore.BLUE +'Şehir: ' + city)
-    print('')
-
-def vipinf():
-    ip = requests.get('http://ifconfig.co/ip', proxies=proxies, headers=SpyAdminFinder.header).text
-    cc = requests.get('http://ifconfig.co/country', proxies=proxies, headers=SpyAdminFinder.header).text
-    iso = requests.get('http://ifconfig.co/country-iso', proxies=proxies, headers=SpyAdminFinder.header).text
-    city = requests.get('http://ifconfig.co/city', proxies=proxies,  headers=SpyAdminFinder.header).text
-    print('''
-        ┌───[''' + Fore.CYAN + '''IP adresi Bilgileri:''' + Fore.YELLOW + ''']
-        ┆''');
-    print('        ├──► ' + Fore.BLUE + 'Ülke: ' + cc + Fore.YELLOW + '        ├───► ' + Fore.BLUE + 'IP: ' + ip + Fore.YELLOW + '        ├────► ' + Fore.BLUE + 'Ülke ISO: ' + iso + Fore.YELLOW + '        └─────► '+ Fore.BLUE +'Şehir: ' + city)
-    print('')
-
-def hos():
-    site = args.url
-    rh = requests.get('http://'+site,proxies=proxies, headers=SpyAdminFinder.header)
-
-    di = socket.gethostbyname(site)
-    print(Fore.CYAN + Style.BRIGHT + '\tServer: ' + Fore.YELLOW + rh.headers['Server'] + '\t\t' + Fore.CYAN + Style.BRIGHT +'Sunucu Adı: ' + Fore.YELLOW + di + '\n')
-    try:
-        xf = dict(rh.headers).get("x-frame-options")
-        xf = str(xf)
-        print(Fore.CYAN + Style.BRIGHT +'\tX-Powered-By: ' + Fore.YELLOW + rh.headers['X-Powered-By'] + '\t\t' + Fore.CYAN + Style.BRIGHT + 'X-Frame-Options: ' + Fore.YELLOW + xf + '\n\n')
-    except KeyError:
-        pass
 
 def update():
     process = subprocess.Popen(["git", "pull"], stdout=subprocess.PIPE)
@@ -227,205 +155,99 @@ def update():
 
 def interactive():
     try:
-        # Random UserAgent
-        #Useragents are from: https://techblog.willshouse.com/2012/01/03/most-common-user-agents/
+        useragent_file = "LinkFile/user-agent.txt"
         try:
-            print(Fore.BLUE + '\tRastgele user-agent alınıyor...', end="\r")
+            print(Fore.BLUE + '\tFetching random user-agent...', end="\r")
             time.sleep(1)
-            useragent = "LinkFile/user-agent.txt"
-            ua = open(useragent, 'r').read().splitlines()
-            rua = random.choice(ua)
-            headers = {'user-agent': rua}
-            print(Fore.BLUE + '\tRastgele user-agent alınıyor...', Fore.GREEN+Style.BRIGHT + 'DONE\n' + Fore.WHITE + Style.NORMAL)
-        except:
-            headers = {'user-agent': 'SpyAdminFinder/%s' % Credits.getCredits()[1]}
-            pass
+            with open(useragent_file, 'r') as f:
+                ua_list = f.read().splitlines()
+            headers = {'user-agent': random.choice(ua_list)}
+            print(Fore.BLUE + '\tFetching random user-agent...', Fore.GREEN + Style.BRIGHT + 'DONE\n' + Fore.WHITE + Style.NORMAL)
+        except FileNotFoundError:
+            headers = {'user-agent': f'SpyAdminFinder/{Credits.getCredits()[1]}'}
+        
         SpyAdminFinder.header = headers
 
-        # Additional params
-        # if not messenger.writeInputWithYesNo(Fore.YELLOW + '  Do you want use default params?'):
-        #     timeout = messenger.writeInput(Fore.YELLOW + '  Change timeout. Please write value in seconds: ' + Fore.GREEN)
-        #     SpyAdminFinder.timeout = timeout
-
-        #Updater
-
-        #network params
-        choice=''
-        print(Fore.YELLOW + '    ┌───[' + Fore.CYAN + 'Ağ ayarları:' + Fore.YELLOW + ']');
-        while (choice not in ['1','2','3','tor','proxy']):
-            choice=input(Fore.YELLOW + '''    ┊
-    ├╼[1] tor
-    ├╼[2] proxy
-    ├╼[3] nothing
-    ┊
-    └───╼''' + Fore.RED + ''' Lütfen bir seçenek belirleyin''' + Fore.YELLOW + ''' ~$ ''')
-            if choice == '1' or choice == 'tor':
-                socks.setdefaultproxy(socks.PROXY_TYPE_SOCKS5, 'localhost', 9050)
-                socket.socket = socks.socksocket
-                urllib.request.urlopen
-                proxies=""
-
-            elif choice == '2' or choice == 'proxy':
-                prox = input('''    ┊
-    └────► set your HTTP proxy {example:127.0.0.1:80} : ~$ ''')
-                proxies = {
-                  'http': 'http://'+prox,
-                  'https': 'http://'+prox,
-                }
-                try:
-                    ht = prox.split(':')
-                    pr = int(ht[1])
-                    s = socks.socksocket()
-                    s.set_proxy(socks.HTTP, ht[0], pr)
-                    socket.socket = socks.socksocket
-                    urllib.request.urlopen
-                except IndexError:
-                    messenger.writeMessage('\n\tLütfen proxy\'nizin biçimini kontrol edin | reminder: 127.0.0.1:8080 ', 'red')
-                    quit(0)
-
-            else:
+        proxies = ""
+        while True:
+            choice = input(Fore.YELLOW + '''    ├╼[1] Tor
+    ├╼[2] Proxy
+    ├╼[3] Nothing
+    └───╼ Please select an option: ''')
+            
+            if choice == '1':
+                tor()
+            elif choice == '2':
+                proxies = setup_proxy()
+            elif choice == '3':
                 proxies = ""
+            else:
                 continue
+            break
 
-        ip = requests.get('http://ifconfig.co/ip', proxies=proxies, headers=SpyAdminFinder.header).text
-        cc = requests.get('http://ifconfig.co/country', proxies=proxies, headers=SpyAdminFinder.header).text
-        iso = requests.get('http://ifconfig.co/country-iso', proxies=proxies, headers=SpyAdminFinder.header).text
-        city = requests.get('http://ifconfig.co/city', proxies=proxies,  headers=SpyAdminFinder.header).text
+        ip = requests.get('http://ifconfig.co/ip', proxies=proxies, headers=SpyAdminFinder.header).text.strip()
+        cc = requests.get('http://ifconfig.co/country', proxies=proxies, headers=SpyAdminFinder.header).text.strip()
+        iso = requests.get('http://ifconfig.co/country-iso', proxies=proxies, headers=SpyAdminFinder.header).text.strip()
+        city = requests.get('http://ifconfig.co/city', proxies=proxies, headers=SpyAdminFinder.header).text.strip()
 
-        print('''    ┆
-    ├───[''' + Fore.CYAN + '''IP addres bilgileri:''' + Fore.YELLOW + ''']
-    ┆''');
-        print('    ├──► ' + Fore.BLUE +'Ülke: ' + cc + Fore.YELLOW + '    ├───► ' + Fore.BLUE +'IP: ' + ip + Fore.YELLOW + '    ├────► '+ Fore.BLUE + 'Ülke ISO: ' + iso + Fore.YELLOW + '    └─────► '+ Fore.BLUE +'Şehir: ' + city)
-        print('')
-        # Get site
-        site = messenger.writeInput('  Site adı girin  { örnek : example.com ya da www.example.com } \n' + Fore.BLUE + ' ~$ ', 'white');
-        print ('')
-        # Checking if the website is online and stable
-        if SpyAdminFinder.checkUrl(site,proxies):
-            messenger.writeMessage('\n  Site %s is stable\n' % site,'green')
+        print(f'''    ┆
+    ├───[''' + Fore.CYAN + Style.BRIGHT + '''*''' + Fore.YELLOW + Style.NORMAL + '''] Your external IP: ''' + Fore.CYAN + Style.BRIGHT + f'''{ip}''' + Fore.YELLOW + Style.NORMAL + f'''
+    ├───[''' + Fore.CYAN + Style.BRIGHT + '''*''' + Fore.YELLOW + Style.NORMAL + '''] Country Code: ''' + Fore.CYAN + Style.BRIGHT + f'''{cc}''' + Fore.YELLOW + Style.NORMAL + f'''
+    ├───[''' + Fore.CYAN + Style.BRIGHT + '''*''' + Fore.YELLOW + Style.NORMAL + '''] ISO Code: ''' + Fore.CYAN + Style.BRIGHT + f'''{iso}''' + Fore.YELLOW + Style.NORMAL + f'''
+    └───[''' + Fore.CYAN + Style.BRIGHT + '''*''' + Fore.YELLOW + Style.NORMAL + '''] City: ''' + Fore.CYAN + Style.BRIGHT + f'''{city}''' + Fore.YELLOW + Style.NORMAL + '''\n''' + Fore.WHITE)
+
+        target = input(f'''    ┌───[''' + Fore.CYAN + Style.BRIGHT + '''*''' + Fore.WHITE + Style.NORMAL + '''] Please enter your target URL: ''')
+
+        if SpyAdminFinder.checkUrl(target, proxies):
+            messenger.writeMessage(f'\n  Scanning {target}, we hope to find something.\n', 'green')
+            urls = tqdm(SpyAdminFinder.getUrls('LinkFile/adminpanellinks.txt'), bar_format="{l_bar}{bar}|{n_fmt}/{total_fmt}{postfix}")
         else:
-            messenger.writeMessage('  url\'de bir sorun var', 'red')
-            exit(SystemExit)
+            messenger.writeMessage('  Something is wrong with the URL', 'red')
+            urls = tqdm(SpyAdminFinder.getUrls('LinkFile/adminpanellinks.txt'), bar_format="{bar}")
+            sys.exit(1)
 
-        #Some additional info about the website
-        rh = requests.get('http://'+site, proxies=proxies, headers=SpyAdminFinder.header)
-
-        di = socket.gethostbyname(site)
-        print(Fore.CYAN + Style.BRIGHT + '\tServer: ' + Fore.YELLOW + rh.headers['Server'] + '\t\t' + Fore.CYAN + Style.BRIGHT +'Hostname: ' + Fore.YELLOW + di + '\n')
-        try:
-            xf = dict(rh.headers).get("x-frame-options")
-            xf = str(xf)
-            print(Fore.CYAN + Style.BRIGHT + '\tX-Powered-By: ' + Fore.YELLOW + rh.headers['X-Powered-By'] + '\t\t' + Fore.CYAN+Style.BRIGHT + 'X-Frame-Options: ' + Fore.YELLOW + xf + '\n\n')
-        except KeyError:
-            pass
-
-        # Get links for checking
-        urls = SpyAdminFinder.getUrls('LinkFile/adminpanellinks.txt')
-
-        # Counters for total links, and admin panel find
-        totalCount = len(urls)
-        adminCount = 0
-
-        # Checking all links
+        totalCount, adminCount = len(urls), 0
         for url in urls:
+            reqLink = SpyAdminFinder.createReqLink(target, url, proxies)
+            urls.set_description(Fore.WHITE + Style.NORMAL + "  Scanning...")
 
-            # Create test link with getting params from input and links.txt file
-            reqLink = SpyAdminFinder.createReqLink(site, url, proxies)
-            messenger.writeMessage('\t[#] Kontrol Ediliyor http://' + reqLink, 'yellow')
-
-            # Test created link for HTTPerrors. If not error - potential admin panel
-            if SpyAdminFinder.checkUrl(reqLink,proxies):
+            if SpyAdminFinder.checkUrl(reqLink, proxies):
                 adminCount += 1
-                messenger.writeMessage('  %s %s' % ('\n  [✔] http://' + reqLink, 'Admin Panel Bulundu!'), 'bright')
+                messenger.writeMessage(f'\n{Fore.CYAN + Style.BRIGHT}[✔] http://{reqLink:<50}{Fore.GREEN + Style.BRIGHT}{"Admin Panel Found!":>30}\n', 'bright')
 
-                # Stopped process? and waiting for input for continue
-                messenger.writeInput('  Taramaya devam etmek için enter tuşuna basın.\n')
-
-            # If HTTPerrors continue testing other links
+                if adminCount % 10 == 0:
+                    messenger.writeInput('  Press ' + Fore.BLUE + Style.BRIGHT + 'Enter ' + Fore.WHITE + Style.NORMAL + 'to continue or ' + Fore.RED + Style.BRIGHT + 'CTRL+C ' + Fore.WHITE + Style.NORMAL + 'to stop.\n')
             else:
                 continue
 
-        # Write last information about scanning with counters
-        messenger.writeMessage('\n\n  Tamamlandı \n', 'green')
-        messenger.writeMessage(str(adminCount) + ' Admin panel bulundu', 'white')
-        messenger.writeMessage(str(totalCount) + ' taranan toplam sayfa sayısı', 'white')
-        messenger.writeInput('  [/] Tarama bitti; çıkmak için enter\'a bas.', 'green')
-        messenger.writeMessage('', 'white')
+        messenger.writeMessage(f'\n\n  Scan Complete \n', 'green')
+        messenger.writeMessage(f'{adminCount} Admin panels found', 'white')
+        messenger.writeMessage(f'{totalCount} Total pages scanned', 'white')
+        messenger.writeInput('  [/] Scan complete; Press Enter to exit ', 'green')
 
     except (KeyboardInterrupt, SystemExit):
-        messenger.writeMessage('\n\t[x] İptal edildi', 'red')
-        messenger.writeMessage('', 'white')
+        messenger.writeMessage('\n\t[x] Cancelled', 'red')
+        urls.close()
+    except Exception as e:
+        messenger.writeMessage(f'\n\t[x] Cancelled due to unknown error: {e}', 'red')
 
-    except():
-        messenger.writeMessage('\n\t[x] İptal edildi; Unknown error', 'red')
-        messenger.writeMessage('', 'white')
+if args.update:
+    update()
 
+if args.rand:
+    random_agent()
 
-if __name__ == '__main__':
-    # Updater
-    if args.update:
-        args.url = False
-        args.tor = False
-        args.rand = False
-        args.proxy = False
-        args.verbose = False
-        args.interactive = False
-        update()
+if args.random_proxy:
+    proxies = random_proxy()
 
-    # interactive
-    if args.interactive:
-        args.url = False
-        args.tor = False
-        args.rand = False
-        args.proxy = False
-        args.verbose = False
-        interactive()
+if args.tor:
+    tor()
 
-    # random user-agent
-    if args.rand:
-        if args.url is False:
-            parser.print_usage()
-            quit(0)
-        else:
-            random_agent()
+if args.proxy:
+    proxies = setup_proxy()
 
-    # random proxy
-    if args.random_proxy:
-        if args.url is False:
-            parser.print_usage()
-            quit(0)
-        else:
-            random_proxy()
-            proxies = random_proxy()
+if args.interactive:
+    interactive()
 
-    # tor
-    if args.tor:
-        if args.url is False:
-            parser.print_usage()
-            quit(0)
-        else:
-            tor()
-
-    # proxy
-    if args.proxy:
-        if args.url is False:
-            parser.print_usage()
-            quit(0)
-        else:
-            proxy()
-            proxies = proxy()
-
-    # verbose
-    if args.verbose:
-        if args.url is False:
-            parser.print_usage()
-            quit(0)
-        else:
-            vipinf()
-            hos()
-
-    # url
-    if args.url:
-        site = args.url
-        # proxies=""
-        url(site)
+if args.url:
+    url_scan(args.url)
