@@ -1,5 +1,5 @@
-colorama==0.4.1
-requests==2.21.0
-PySocks==1.6.8
-argparse==1.4.0
-tqdm==4.31.1
+colorama==0.4.6
+requests==2.31.0
+PySocks==1.7.1
+argparse==1.4.0  # argparse modülü Python 3.2'den sonra zaten yerleşik, ayrı kurulum gerekmiyor.
+tqdm==4.66.1
